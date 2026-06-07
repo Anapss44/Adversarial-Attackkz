@@ -1,2 +1,2 @@
 # Adversarial-Attackkz
-This is for Ai learners &amp; developers
+This is for AI learners &amp; developers
