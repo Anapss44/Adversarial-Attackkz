@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Adversarial Attack Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080a08;--bg2:#0d100d;--bg3:#111511;--panel:#121612;--border:#1e2a1e;--border2:#243024;
+  --amber:#f5a623;--amber-d:#b87a10;--green:#39e05b;--red:#ff4444;--blue:#4db8ff;--yellow:#ffe066;
+  --text:#a8bca8;--text-dim:#4a5e4a;--text-hi:#d4e8d4;
+  --mono:'IBM Plex Mono',monospace;--head:'Barlow Condensed',sans-serif;--body:'Barlow',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(57,224,91,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(57,224,91,.015) 1px,transparent 1px);
+  background-size:40px 40px}
+#app{position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:0 24px 80px}
+header{display:flex;align-items:center;justify-content:space-between;padding:24px 0 20px;border-bottom:1px solid var(--border);margin-bottom:32px;flex-wrap:wrap;gap:12px}
+.logo{display:flex;align-items:center;gap:14px}
+.logo-hex{width:44px;height:44px;background:linear-gradient(135deg,var(--amber),var(--amber-d));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:1.1rem;animation:hpulse 4s ease-in-out infinite}
+@keyframes hpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3) drop-shadow(0 0 12px rgba(245,166,35,.6))}}
+.logo-text{display:flex;flex-direction:column;gap:2px}
+.logo-main{font-family:var(--head);font-size:1.7rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--text-hi)}
+.logo-sub{font-family:var(--mono);font-size:.62rem;color:var(--amber);letter-spacing:3px}
+.sys-status{font-family:var(--mono);font-size:.68rem;color:var(--green);display:flex;align-items:center;gap:8px;border:1px solid rgba(57,224,91,.25);padding:7px 14px;background:rgba(57,224,91,.04)}
+.sys-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.tabs{display:flex;gap:0;margin-bottom:32px;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--head);font-size:.9rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:none;border:none;color:var(--text-dim);padding:12px 26px;cursor:pointer;position:relative;transition:color .2s;border-right:1px solid var(--border)}
+.tab::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--amber);transform:scaleX(0);transition:transform .2s}
+.tab.active{color:var(--amber)}.tab.active::after{transform:scaleX(1)}.tab:hover{color:var(--text)}
+.tpanel{display:none;animation:fadein .25s ease}.tpanel.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:2px;overflow:hidden}
+.ph{padding:11px 18px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.66rem;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);display:flex;align-items:center;gap:10px}
+.ph-dot{width:7px;height:7px;border-radius:50%;background:var(--amber)}.ph-dot.g{background:var(--green)}.ph-dot.r{background:var(--red)}.ph-dot.b{background:var(--blue)}
+.pb{padding:22px 18px}
+.grid2{display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.drop{border:1px dashed var(--border2);padding:36px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(57,224,91,.015);position:relative;margin-bottom:18px}
+.drop:hover,.drop.drag{border-color:var(--amber);background:rgba(245,166,35,.05)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-ico{font-size:2.2rem;display:block;margin-bottom:10px}
+.drop-txt{font-family:var(--mono);font-size:.75rem;color:var(--text-dim)}
+.drop-txt strong{color:var(--amber);display:block;margin-bottom:4px;font-size:.85rem}
+.prev-img{width:100%;max-height:180px;object-fit:contain;display:none;margin-bottom:14px;border:1px solid var(--border2);background:#060806;padding:4px}
+.ctl{margin-bottom:18px}
+.ctl-label{font-family:var(--mono);font-size:.68rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px;display:flex;justify-content:space-between}
+.ctl-label em{color:var(--amber);font-style:normal;font-size:.85rem}
+select,input[type=range]{width:100%;font-family:var(--mono);font-size:.78rem}
+select{background:var(--bg2);color:var(--text);border:1px solid var(--border2);padding:9px 12px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5e4a'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+select:focus{border-color:var(--amber)}
+input[type=range]{-webkit-appearance:none;height:3px;background:var(--border2);outline:none;border-radius:1px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--amber);border-radius:50%;cursor:pointer;transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25)}
+input[type=number]{background:var(--bg2);color:var(--text);border:1px solid var(--border2);padding:7px 10px;font-family:var(--mono);font-size:.78rem;width:100%;outline:none}
+input[type=number]:focus{border-color:var(--amber)}
+.attack-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.atk-card{border:1px solid var(--border2);padding:10px 12px;cursor:pointer;transition:all .15s;background:var(--bg2)}
+.atk-card:hover{border-color:var(--amber);background:rgba(245,166,35,.04)}.atk-card.selected{border-color:var(--amber);background:rgba(245,166,35,.08)}
+.atk-card-name{font-family:var(--head);font-size:.9rem;font-weight:700;letter-spacing:2px;color:var(--text-hi);text-transform:uppercase}
+.atk-card-type{font-family:var(--mono);font-size:.6rem;color:var(--text-dim);margin-top:2px}
+.btn{font-family:var(--head);font-weight:700;letter-spacing:3px;text-transform:uppercase;border:none;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:1px}
+.btn-primary{background:var(--amber);color:#000;padding:12px 22px;font-size:.85rem;width:100%}
+.btn-primary:hover:not(:disabled){background:var(--yellow);box-shadow:0 0 20px rgba(245,166,35,.35)}.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-detect{background:var(--green);color:#000;padding:12px 22px;font-size:.85rem;width:100%}
+.btn-detect:hover:not(:disabled){background:#6aff87;box-shadow:0 0 20px rgba(57,224,91,.35)}.btn-detect:disabled{opacity:.35;cursor:not-allowed}
+.btn-sm{padding:5px 12px;font-size:.65rem;background:transparent;border:1px solid var(--border2);color:var(--text-dim)}
+.btn-sm:hover{border-color:var(--amber);color:var(--amber)}.btn-del{border-color:var(--red);color:var(--red)}.btn-del:hover{background:rgba(255,68,68,.1)}
+.spin{width:12px;height:12px;border:2px solid rgba(0,0,0,.25);border-top-color:#000;border-radius:50%;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-area{display:none}.result-area.on{display:block}
+.banner{padding:12px 18px;margin-bottom:20px;font-family:var(--head);font-size:1rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:12px}
+.banner.success{background:rgba(57,224,91,.06);border:1px solid rgba(57,224,91,.25);color:var(--green)}
+.banner.fail{background:rgba(255,68,68,.06);border:1px solid rgba(255,68,68,.25);color:var(--red)}
+.img-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.img-box{border:1px solid var(--border2);background:var(--bg2)}
+.img-box-hd{padding:9px 14px;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:.65rem;letter-spacing:2px;text-transform:uppercase}
+.img-box-hd.o{color:var(--blue)}.img-box-hd.a{color:var(--red)}
+.img-box img{width:100%;aspect-ratio:1;object-fit:contain;display:block;background:#060806;padding:6px}
+.img-box-ft{padding:10px 14px;border-top:1px solid var(--border2)}
+.pred-main{font-family:var(--head);font-size:1.05rem;font-weight:700;color:var(--text-hi);text-transform:capitalize;margin-bottom:2px}
+.pred-conf{font-family:var(--mono);font-size:.7rem;color:var(--text-dim)}
+.meta-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:700px){.meta-row{grid-template-columns:1fr 1fr}}
+.mc{background:var(--bg2);border:1px solid var(--border2);padding:14px;text-align:center}
+.mc-val{font-family:var(--mono);font-size:1.1rem;color:var(--amber);display:block;margin-bottom:3px}
+.mc-lbl{font-family:var(--head);font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
+.cbar{margin-bottom:10px}
+.cbar-top{font-family:var(--mono);font-size:.66rem;color:var(--text-dim);display:flex;justify-content:space-between;margin-bottom:4px;text-transform:capitalize}
+.cbar-track{height:4px;background:var(--border2);border-radius:1px;overflow:hidden}
+.cbar-fill{height:100%;border-radius:1px;transition:width .5s ease}
+.fill-o{background:var(--blue)}.fill-a{background:var(--red)}
+.det-grid{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.det-grid{grid-template-columns:1fr}}
+.verdict-box{text-align:center;padding:28px 20px;border:1px solid var(--border2);margin-bottom:20px;background:var(--bg2)}
+.verdict-label{font-family:var(--head);font-size:2.4rem;font-weight:800;letter-spacing:6px;text-transform:uppercase;display:block;margin-bottom:6px}
+.verdict-label.ADVERSARIAL{color:var(--red);text-shadow:0 0 20px rgba(255,68,68,.4)}
+.verdict-label.SUSPICIOUS{color:var(--yellow);text-shadow:0 0 20px rgba(255,224,102,.3)}
+.verdict-label.CLEAN{color:var(--green);text-shadow:0 0 20px rgba(57,224,91,.3)}
+.verdict-conf{font-family:var(--mono);font-size:.8rem;color:var(--text-dim)}
+.gauge-wrap{margin:18px 0;position:relative}
+.gauge-label{font-family:var(--mono);font-size:.65rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px;display:flex;justify-content:space-between}
+.gauge-track{height:20px;background:var(--border2);border-radius:1px;overflow:hidden;position:relative}
+.gauge-fill{height:100%;border-radius:1px;transition:width .8s cubic-bezier(.25,.46,.45,.94);position:relative}
+.gauge-fill::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0,rgba(255,255,255,.05) 4px,transparent 4px,transparent 8px)}
+.gauge-pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:.72rem;font-weight:600;color:#000;z-index:1}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.feat-card{border:1px solid var(--border2);padding:12px 14px;background:var(--bg2)}
+.feat-name{font-family:var(--mono);font-size:.62rem;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
+.feat-val{font-family:var(--mono);font-size:.92rem;color:var(--text-hi)}
+.feat-val.warn{color:var(--yellow)}.feat-val.danger{color:var(--red)}.feat-val.ok{color:var(--green)}
+.flag-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.flag{font-family:var(--mono);font-size:.65rem;padding:4px 10px;border-radius:1px;border:1px solid}
+.flag.yes{border-color:rgba(255,68,68,.4);background:rgba(255,68,68,.08);color:var(--red)}
+.flag.no{border-color:rgba(57,224,91,.3);background:rgba(57,224,91,.06);color:var(--green)}
+.hist-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.hist-title{font-family:var(--head);font-size:1.1rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-hi)}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.73rem}
+thead tr{border-bottom:1px solid var(--border2)}
+th{text-align:left;padding:10px 14px;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid rgba(30,42,30,.4);vertical-align:middle}
+tbody tr:hover{background:rgba(245,166,35,.02)}
+.badge{padding:3px 9px;border-radius:1px;font-size:.62rem;letter-spacing:2px;font-weight:600;text-transform:uppercase}
+.badge-ok{background:rgba(57,224,91,.1);color:var(--green);border:1px solid rgba(57,224,91,.25)}
+.badge-fail{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25)}
+.badge-adv{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25)}
+.badge-sus{background:rgba(255,224,102,.1);color:var(--yellow);border:1px solid rgba(255,224,102,.25)}
+.badge-clean{background:rgba(57,224,91,.1);color:var(--green);border:1px solid rgba(57,224,91,.25)}
+.badge-type{background:rgba(77,184,255,.08);color:var(--blue);border:1px solid rgba(77,184,255,.2)}
+.empty{text-align:center;padding:50px;font-family:var(--mono);font-size:.78rem;color:var(--text-dim)}
+.empty span{display:block;font-size:2rem;margin-bottom:10px;opacity:.3}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.scard{background:var(--panel);border:1px solid var(--border);padding:22px 18px;position:relative;overflow:hidden}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.scard:nth-child(1)::before{background:var(--amber)}.scard:nth-child(2)::before{background:var(--green)}
+.scard:nth-child(3)::before{background:var(--red)}.scard:nth-child(4)::before{background:var(--blue)}
+.scard:nth-child(5)::before{background:var(--yellow)}.scard:nth-child(6)::before{background:var(--amber)}
+.snum{font-family:var(--mono);font-size:2rem;color:var(--text-hi);display:block;margin-bottom:5px;line-height:1}
+.slbl{font-family:var(--head);font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim)}
+.type-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.75rem}
+.type-table td{padding:10px 14px;border-bottom:1px solid var(--border)}
+.type-table td:first-child{font-family:var(--head);font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-hi)}
+.type-bar-wrap{display:flex;align-items:center;gap:10px}
+.type-bar{flex:1;height:6px;background:var(--border2);border-radius:1px;overflow:hidden}
+.type-bar-fill{height:100%;background:var(--amber)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--red);color:#fff;padding:12px 18px;font-family:var(--mono);font-size:.75rem;max-width:320px;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s ease;border-left:3px solid #fff}
+.toast.on{transform:translateY(0);opacity:1}
+.overlay{display:none;position:fixed;inset:0;background:rgba(8,10,8,.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+.overlay.on{display:flex}
+.ov-ring{width:52px;height:52px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite}
+.ov-txt{font-family:var(--mono);font-size:.8rem;color:var(--amber);letter-spacing:3px}
+.ov-sub{font-family:var(--mono);font-size:.65rem;color:var(--text-dim)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2)}::-webkit-scrollbar-thumb:hover{background:var(--amber)}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="logo">
+    <div class="logo-hex">&#128737;</div>
+    <div class="logo-text">
+      <div class="logo-main">Adversarial Lab</div>
+      <div class="logo-sub">// ATTACK GENERATION &middot; ENSEMBLE DETECTION &middot; ANALYSIS</div>
+    </div>
+  </div>
+  <div class="sys-status"><div class="sys-dot"></div> SYSTEM READY</div>
+</header>
+<div class="tabs">
+  <button class="tab active" data-tab="attack">&#9889; Attack Lab</button>
+  <button class="tab" data-tab="detect">&#128269; Detector</button>
+  <button class="tab" data-tab="history">&#128203; History</button>
+  <button class="tab" data-tab="stats">&#128202; Stats</button>
+</div>
+
+<!-- ATTACK TAB -->
+<div class="tpanel active" id="tab-attack">
+  <div class="grid2">
+    <div>
+      <div class="panel">
+        <div class="ph"><div class="ph-dot"></div> ATTACK CONFIGURATION</div>
+        <div class="pb">
+          <div class="drop" id="atkDrop">
+            <input type="file" id="atkFile" accept="image/*"/>
+            <span class="drop-ico">&#127919;</span>
+            <div class="drop-txt"><strong>UPLOAD TARGET IMAGE</strong>JPG &middot; PNG &middot; WEBP &middot; BMP</div>
+          </div>
+          <img id="atkPreview" class="prev-img" alt="preview"/>
+          <div class="ctl"><div class="ctl-label">ATTACK METHOD</div>
+            <div class="attack-cards" id="attackCards">
+              <div class="atk-card selected" data-atk="fgsm"><div class="atk-card-name">FGSM</div><div class="atk-card-type">Single-step gradient</div></div>
+              <div class="atk-card" data-atk="pgd"><div class="atk-card-name">PGD</div><div class="atk-card-type">Iterative projected GD</div></div>
+              <div class="atk-card" data-atk="bim"><div class="atk-card-name">BIM</div><div class="atk-card-type">Basic iterative method</div></div>
+              <div class="atk-card" data-atk="deepfool"><div class="atk-card-name">DeepFool</div><div class="atk-card-type">Minimal perturbation</div></div>
+              <div class="atk-card" data-atk="cw" style="grid-column:span 2"><div class="atk-card-name">C&amp;W</div><div class="atk-card-type">Carlini &amp; Wagner L2 (optimization-based)</div></div>
+            </div>
+          </div>
+          <div id="atkParams"></div>
+          <button class="btn btn-primary" id="atkBtn" disabled>
+            <div class="spin" id="atkSpin" style="display:none"></div>
+            <span id="atkBtnTxt">&#9889; LAUNCH ATTACK</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="result-area" id="atkResult">
+        <div class="banner" id="atkBanner"></div>
+        <div class="meta-row">
+          <div class="mc"><span class="mc-val" id="m-type">-</span><span class="mc-lbl">Attack</span></div>
+          <div class="mc"><span class="mc-val" id="m-linf">-</span><span class="mc-lbl">L-inf Norm</span></div>
+          <div class="mc"><span class="mc-val" id="m-l2">-</span><span class="mc-lbl">L2 Norm</span></div>
+          <div class="mc"><span class="mc-val" id="m-dev">-</span><span class="mc-lbl">Device</span></div>
+        </div>
+        <div class="img-compare">
+          <div class="img-box"><div class="img-box-hd o">ORIGINAL</div><img id="origImg"/><div class="img-box-ft"><div class="pred-main" id="origLbl">-</div><div class="pred-conf" id="origCnf">-</div></div></div>
+          <div class="img-box"><div class="img-box-hd a">ADVERSARIAL</div><img id="advImg"/><div class="img-box-ft"><div class="pred-main" id="advLbl">-</div><div class="pred-conf" id="advCnf">-</div></div></div>
+        </div>
+        <div class="panel" style="margin-bottom:18px">
+          <div class="ph"><div class="ph-dot b"></div> TOP PREDICTIONS</div>
+          <div class="pb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div><div style="font-family:var(--mono);font-size:.62rem;color:var(--blue);letter-spacing:2px;margin-bottom:10px">ORIGINAL</div><div id="origPreds"></div></div>
+            <div><div style="font-family:var(--mono);font-size:.62rem;color:var(--red);letter-spacing:2px;margin-bottom:10px">ADVERSARIAL</div><div id="advPreds"></div></div>
+          </div></div>
+        </div>
+        <a id="atkDl" href="#" download="adversarial.png" style="display:none">
+          <button class="btn btn-sm" style="width:100%;padding:10px;margin-bottom:12px">DOWNLOAD ADVERSARIAL IMAGE</button>
+        </a>
+      </div>
+      <div class="panel" id="atkEmpty">
+        <div class="ph"><div class="ph-dot"></div> RESULTS</div>
+        <div class="empty"><span>&#128300;</span>Upload an image and launch an attack to see results.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETECT TAB -->
+<div class="tpanel" id="tab-detect">
+  <div class="det-grid">
+    <div>
+      <div class="panel">
+        <div class="ph"><div class="ph-dot g"></div> IMAGE INPUT</div>
+        <div class="pb">
+          <div class="drop" id="detDrop">
+            <input type="file" id="detFile" accept="image/*"/>
+            <span class="drop-ico">&#128269;</span>
+            <div class="drop-txt"><strong>UPLOAD IMAGE TO ANALYSE</strong>Clean or adversarial &mdash; detector decides</div>
+          </div>
+          <img id="detPreview" class="prev-img" alt="preview"/>
+          <div class="panel" style="margin-bottom:18px;background:var(--bg2)">
+            <div class="ph"><div class="ph-dot"></div> DETECTION METHODS</div>
+            <div class="pb" style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-family:var(--mono);font-size:.7rem;color:var(--text-dim)">
+                <strong style="color:var(--amber)">Statistical Analysis (45%)</strong><br/>
+                HF energy &middot; gradient magnitude &middot; kurtosis &middot; local variance &middot; cross-channel correlation
+              </div>
+              <div style="font-family:var(--mono);font-size:.7rem;color:var(--text-dim)">
+                <strong style="color:var(--green)">Model-Based Signals (55%)</strong><br/>
+                Input squeezing (median filter) &middot; JPEG compression &middot; confidence drop analysis
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-detect" id="detBtn" disabled>
+            <div class="spin" id="detSpin" style="display:none;border-top-color:#000"></div>
+            <span id="detBtnTxt">&#128269; ANALYSE IMAGE</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="result-area" id="detResult">
+        <div class="verdict-box">
+          <span class="verdict-label" id="verdictLbl">-</span>
+          <div class="verdict-conf" id="verdictConf">-</div>
+        </div>
+        <div class="panel" style="margin-bottom:18px">
+          <div class="ph"><div class="ph-dot"></div> SUSPICION SCORE</div>
+          <div class="pb">
+            <div class="gauge-wrap">
+              <div class="gauge-label"><span>STATISTICAL SIGNAL</span><span id="gStat">-</span></div>
+              <div class="gauge-track"><div class="gauge-fill" id="gStatFill" style="background:var(--amber)"><div class="gauge-pct" id="gStatPct"></div></div></div>
+            </div>
+            <div class="gauge-wrap">
+              <div class="gauge-label"><span>MODEL-BASED SIGNAL</span><span id="gModel">-</span></div>
+              <div class="gauge-track"><div class="gauge-fill" id="gModelFill" style="background:var(--blue)"><div class="gauge-pct" id="gModelPct"></div></div></div>
+            </div>
+            <div class="gauge-wrap">
+              <div class="gauge-label"><span>ENSEMBLE SCORE</span><span id="gEns">-</span></div>
+              <div class="gauge-track" style="height:26px"><div class="gauge-fill" id="gEnsFill"><div class="gauge-pct" id="gEnsPct" style="color:#000"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-bottom:18px">
+          <div class="ph"><div class="ph-dot r"></div> DETECTION FLAGS</div>
+          <div class="pb"><div class="flag-row" id="detFlags"></div></div>
+        </div>
+        <div class="panel" style="margin-bottom:18px">
+          <div class="ph"><div class="ph-dot"></div> FEATURE ANALYSIS</div>
+          <div class="pb"><div class="feat-grid" id="featGrid"></div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="ph-dot b"></div> MODEL PREDICTIONS (ORIGINAL IMAGE)</div>
+          <div class="pb" id="detPreds"></div>
+        </div>
+      </div>
+      <div class="panel" id="detEmpty">
+        <div class="ph"><div class="ph-dot g"></div> DETECTION RESULT</div>
+        <div class="empty"><span>&#129514;</span>Upload an image to run the ensemble detector.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY TAB -->
+<div class="tpanel" id="tab-history">
+  <div style="margin-bottom:28px">
+    <div class="hist-hd">
+      <div class="hist-title">Attack History</div>
+      <button class="btn btn-sm" onclick="loadAtkHistory()">Refresh</button>
+    </div>
+    <div class="panel"><div style="overflow-x:auto"><table>
+      <thead><tr><th>Time</th><th>File</th><th>Attack</th><th>Original</th><th>Adversarial</th><th>Result</th><th>L-inf</th><th>L2</th><th></th></tr></thead>
+      <tbody id="atkHistBody"><tr><td colspan="9"><div class="empty"><span>&#128194;</span>No attacks yet.</div></td></tr></tbody>
+    </table></div></div>
+  </div>
+  <div>
+    <div class="hist-hd">
+      <div class="hist-title">Detection History</div>
+      <button class="btn btn-sm" onclick="loadDetHistory()">Refresh</button>
+    </div>
+    <div class="panel"><div style="overflow-x:auto"><table>
+      <thead><tr><th>Time</th><th>File</th><th>Verdict</th><th>Ensemble Score</th><th>Stat Signal</th><th>Model Signal</th><th></th></tr></thead>
+      <tbody id="detHistBody"><tr><td colspan="7"><div class="empty"><span>&#128194;</span>No detections yet.</div></td></tr></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<!-- STATS TAB -->
+<div class="tpanel" id="tab-stats">
+  <div class="stat-cards">
+    <div class="scard"><span class="snum" id="s1">-</span><span class="slbl">Total Attacks</span></div>
+    <div class="scard"><span class="snum" id="s2">-</span><span class="slbl">Successful Attacks</span></div>
+    <div class="scard"><span class="snum" id="s3">-</span><span class="slbl">Attack Success Rate</span></div>
+    <div class="scard"><span class="snum" id="s4">-</span><span class="slbl">Total Detections</span></div>
+    <div class="scard"><span class="snum" id="s5">-</span><span class="slbl">Adversarial Detected</span></div>
+    <div class="scard"><span class="snum" id="s6">-</span><span class="slbl">Detection Rate</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="panel">
+      <div class="ph"><div class="ph-dot"></div> ATTACKS BY TYPE</div>
+      <div class="pb"><table class="type-table" id="typeTable"></table></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><div class="ph-dot r"></div> TOP FOOLED CLASSES</div>
+      <div class="pb" id="topFooled"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="ov-ring"></div>
+  <div class="ov-txt" id="ovTxt">PROCESSING</div>
+  <div class="ov-sub" id="ovSub">Please wait...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API='http://localhost:3001/api';
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tpanel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+  if(t.dataset.tab==='history'){loadAtkHistory();loadDetHistory();}
+  if(t.dataset.tab==='stats')loadStats();
+}));
+
+const ATK_PARAMS={
+  fgsm:[{id:'epsilon',label:'Epsilon',type:'range',min:.01,max:.5,step:.01,def:.1}],
+  pgd:[{id:'epsilon',label:'Epsilon',type:'range',min:.01,max:.5,step:.01,def:.1},{id:'alpha',label:'Step size',type:'range',min:.001,max:.05,step:.001,def:.01},{id:'steps',label:'Steps',type:'number',min:5,max:200,def:40}],
+  bim:[{id:'epsilon',label:'Epsilon',type:'range',min:.01,max:.5,step:.01,def:.1},{id:'steps',label:'Steps',type:'number',min:1,max:100,def:10}],
+  deepfool:[{id:'steps',label:'Max steps',type:'number',min:10,max:200,def:50},{id:'overshoot',label:'Overshoot',type:'range',min:.001,max:.1,step:.001,def:.02}],
+  cw:[{id:'c',label:'Confidence c',type:'range',min:.1,max:10,step:.1,def:1},{id:'kappa',label:'Kappa',type:'range',min:0,max:5,step:.5,def:0},{id:'steps',label:'Steps',type:'number',min:20,max:500,def:100},{id:'lr',label:'Learning rate',type:'range',min:.001,max:.1,step:.001,def:.01}]
+};
+let selectedAtk='fgsm';
+
+function renderAtkParams(atk){
+  document.getElementById('atkParams').innerHTML=ATK_PARAMS[atk].map(p=>{
+    if(p.type==='range')return`<div class="ctl"><div class="ctl-label">${p.label} <em id="v_${p.id}">${p.def}</em></div><input type="range" id="p_${p.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.def}" oninput="document.getElementById('v_${p.id}').textContent=parseFloat(this.value).toFixed(this.step<.01?3:2)"/></div>`;
+    return`<div class="ctl"><div class="ctl-label">${p.label}</div><input type="number" id="p_${p.id}" min="${p.min}" max="${p.max}" value="${p.def}"/></div>`;
+  }).join('');
+}
+renderAtkParams('fgsm');
+document.querySelectorAll('.atk-card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.atk-card').forEach(x=>x.classList.remove('selected'));
+  c.classList.add('selected');selectedAtk=c.dataset.atk;renderAtkParams(selectedAtk);
+}));
+function getParams(){const out={};ATK_PARAMS[selectedAtk].forEach(p=>{const el=document.getElementById('p_'+p.id);if(el)out[p.id]=p.type==='number'?parseInt(el.value):parseFloat(el.value);});return out;}
+
+let atkFile=null,detFile=null;
+setupDrop('atkDrop','atkFile','atkPreview','atkBtn',f=>{atkFile=f;});
+setupDrop('detDrop','detFile','detPreview','detBtn',f=>{detFile=f;});
+
+document.getElementById('atkBtn').addEventListener('click',async()=>{
+  if(!atkFile)return;
+  const fd=new FormData();fd.append('image',atkFile);fd.append('attack_type',selectedAtk);fd.append('params',JSON.stringify(getParams()));
+  showOverlay('RUNNING '+selectedAtk.toUpperCase()+' ATTACK','Computing gradients...');
+  setBtnLoading('atkBtn','atkSpin','atkBtnTxt',true,'RUNNING...');
+  try{const r=await fetch(API+'/attack',{method:'POST',body:fd}).then(x=>x.json());if(!r.success)throw new Error(r.error);renderAtkResult(r);}
+  catch(e){toast('Error: '+e.message);}
+  finally{hideOverlay();setBtnLoading('atkBtn','atkSpin','atkBtnTxt',false,'LAUNCH ATTACK');}
+});
+
+document.getElementById('detBtn').addEventListener('click',async()=>{
+  if(!detFile)return;
+  const fd=new FormData();fd.append('image',detFile);
+  showOverlay('RUNNING ENSEMBLE DETECTOR','Statistical + model-based analysis...');
+  setBtnLoading('detBtn','detSpin','detBtnTxt',true,'ANALYSING...');
+  try{const r=await fetch(API+'/detect',{method:'POST',body:fd}).then(x=>x.json());if(!r.success)throw new Error(r.error);renderDetResult(r);}
+  catch(e){toast('Error: '+e.message);}
+  finally{hideOverlay();setBtnLoading('detBtn','detSpin','detBtnTxt',false,'ANALYSE IMAGE');}
+});
+
+function renderAtkResult(r){
+  document.getElementById('atkEmpty').style.display='none';
+  document.getElementById('atkResult').classList.add('on');
+  const b=document.getElementById('atkBanner');
+  b.className='banner '+(r.attack_successful?'success':'fail');
+  b.textContent=r.attack_successful?'ATTACK SUCCESSFUL -- Model Fooled!':'ATTACK FAILED -- Model Resisted';
+  document.getElementById('m-type').textContent=r.attack_type.toUpperCase();
+  document.getElementById('m-linf').textContent=r.perturbation.linf.toExponential(2);
+  document.getElementById('m-l2').textContent=r.perturbation.l2.toFixed(3);
+  document.getElementById('m-dev').textContent=(r.device||'cpu').toUpperCase();
+  document.getElementById('origImg').src='data:image/png;base64,'+r.original.image_b64;
+  document.getElementById('advImg').src='data:image/png;base64,'+r.adversarial.image_b64;
+  document.getElementById('origLbl').textContent=r.original.label;
+  document.getElementById('origCnf').textContent=r.original.confidence+'% confidence';
+  document.getElementById('advLbl').textContent=r.adversarial.label;
+  document.getElementById('advCnf').textContent=r.adversarial.confidence+'% confidence';
+  renderBars('origPreds',r.original.top_predictions,'fill-o');
+  renderBars('advPreds',r.adversarial.top_predictions,'fill-a');
+  const dl=document.getElementById('atkDl');dl.href='http://localhost:3001'+r.adversarial.download_url;dl.style.display='block';
+  document.getElementById('atkResult').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderDetResult(r){
+  document.getElementById('detEmpty').style.display='none';
+  document.getElementById('detResult').classList.add('on');
+  const vl=document.getElementById('verdictLbl');
+  vl.textContent=r.verdict;vl.className='verdict-label '+r.verdict;
+  document.getElementById('verdictConf').textContent='Confidence: '+r.confidence+'%';
+  setGauge('gStat','gStatFill','gStatPct',r.stat_suspicion,r.stat_suspicion>60?'var(--red)':r.stat_suspicion>40?'var(--yellow)':'var(--amber)');
+  setGauge('gModel','gModelFill','gModelPct',r.model_suspicion,r.model_suspicion>60?'var(--red)':r.model_suspicion>40?'var(--yellow)':'var(--blue)');
+  const ec=r.verdict==='ADVERSARIAL'?'var(--red)':r.verdict==='SUSPICIOUS'?'var(--yellow)':'var(--green)';
+  setGauge('gEns','gEnsFill','gEnsPct',r.ensemble_score*100,ec);
+  const f=r.features;
+  document.getElementById('detFlags').innerHTML=[
+    {label:'Pred changed after median filter',val:f.pred_changed_squeeze},
+    {label:'Pred changed after JPEG compress',val:f.pred_changed_jpeg},
+    {label:'High-frequency energy elevated',val:f.hf_energy>0.008},
+    {label:'High gradient magnitude',val:f.gradient_magnitude>0.015},
+  ].map(x=>'<div class="flag '+(x.val?'yes':'no')+'">'+(x.val?'! ':' ')+ x.label+'</div>').join('');
+  document.getElementById('featGrid').innerHTML=[
+    {name:'HF Energy',val:f.hf_energy.toFixed(6),cls:f.hf_energy>.01?'danger':f.hf_energy>.006?'warn':'ok'},
+    {name:'Gradient Mag.',val:f.gradient_magnitude.toFixed(6),cls:f.gradient_magnitude>.02?'danger':f.gradient_magnitude>.01?'warn':'ok'},
+    {name:'Variance Std',val:f.local_variance_std.toFixed(6),cls:f.local_variance_std>.004?'warn':'ok'},
+    {name:'Kurtosis',val:f.kurtosis.toFixed(3),cls:Math.abs(f.kurtosis)>3?'warn':'ok'},
+    {name:'Channel Corr.',val:f.cross_channel_corr.toFixed(4),cls:f.cross_channel_corr<.7?'warn':'ok'},
+    {name:'Model Conf.',val:f.original_confidence.toFixed(1)+'%',cls:f.original_confidence<30?'danger':f.original_confidence<60?'warn':'ok'},
+    {name:'Conf Drop Med.',val:f.confidence_drop_median.toFixed(1)+'%',cls:f.confidence_drop_median>15?'danger':f.confidence_drop_median>8?'warn':'ok'},
+    {name:'Conf Drop JPEG',val:f.confidence_drop_jpeg.toFixed(1)+'%',cls:f.confidence_drop_jpeg>15?'danger':f.confidence_drop_jpeg>8?'warn':'ok'},
+  ].map(x=>'<div class="feat-card"><div class="feat-name">'+x.name+'</div><div class="feat-val '+x.cls+'">'+x.val+'</div></div>').join('');
+  document.getElementById('detPreds').innerHTML=r.top_predictions.map(p=>'<div class="cbar"><div class="cbar-top"><span>'+p.label+'</span><span>'+p.confidence.toFixed(1)+'%</span></div><div class="cbar-track"><div class="cbar-fill fill-o" style="width:'+p.confidence+'%"></div></div></div>').join('');
+}
+
+function renderBars(id,preds,cls){document.getElementById(id).innerHTML=preds.map(p=>'<div class="cbar"><div class="cbar-top"><span>'+p.label+'</span><span>'+p.confidence.toFixed(1)+'%</span></div><div class="cbar-track"><div class="cbar-fill '+cls+'" style="width:'+p.confidence+'%"></div></div></div>').join('');}
+function setGauge(lId,fId,pId,pct,color){document.getElementById(lId).textContent=pct.toFixed(1)+'%';const f=document.getElementById(fId);f.style.width=Math.max(2,pct)+'%';f.style.background=color;document.getElementById(pId).textContent=pct.toFixed(0)+'%';}
+
+async function loadAtkHistory(){
+  try{const {attacks}=await fetch(API+'/history/attacks?limit=50').then(x=>x.json());
+  const tb=document.getElementById('atkHistBody');
+  if(!attacks||!attacks.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><span>&#128194;</span>No attacks yet.</div></td></tr>';return;}
+  tb.innerHTML=attacks.map(a=>'<tr><td>'+fmt(a.created_at)+'</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.original_filename+'">'+a.original_filename+'</td><td><span class="badge badge-type">'+(a.attack_type||'').toUpperCase()+'</span></td><td style="text-transform:capitalize">'+(a.original_label||'-')+'</td><td style="text-transform:capitalize">'+(a.adversarial_label||'-')+'</td><td><span class="badge '+(a.attack_successful?'badge-ok':'badge-fail')+'">'+(a.attack_successful?'FOOLED':'RESISTED')+'</span></td><td>'+(a.pert_linf?parseFloat(a.pert_linf).toExponential(2):'-')+'</td><td>'+(a.pert_l2?parseFloat(a.pert_l2).toFixed(3):'-')+'</td><td><button class="btn btn-sm btn-del" onclick="delAtk(\''+a.id+'\')">X</button></td></tr>').join('');}
+  catch(e){toast('Failed to load history');}
+}
+
+async function loadDetHistory(){
+  try{const {detections}=await fetch(API+'/history/detections?limit=50').then(x=>x.json());
+  const tb=document.getElementById('detHistBody');
+  if(!detections||!detections.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><span>&#128194;</span>No detections yet.</div></td></tr>';return;}
+  tb.innerHTML=detections.map(d=>'<tr><td>'+fmt(d.created_at)+'</td><td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+d.original_filename+'</td><td><span class="badge '+(d.verdict==='ADVERSARIAL'?'badge-adv':d.verdict==='SUSPICIOUS'?'badge-sus':'badge-clean')+'">'+d.verdict+'</span></td><td>'+(d.ensemble_score?(parseFloat(d.ensemble_score)*100).toFixed(1)+'%':'-')+'</td><td>'+(d.stat_suspicion?parseFloat(d.stat_suspicion).toFixed(1)+'%':'-')+'</td><td>'+(d.model_suspicion?parseFloat(d.model_suspicion).toFixed(1)+'%':'-')+'</td><td><button class="btn btn-sm btn-del" onclick="delDet(\''+d.id+'\')">X</button></td></tr>').join('');}
+  catch(e){toast('Failed to load history');}
+}
+
+async function delAtk(id){if(!confirm('Delete?'))return;await fetch(API+'/history/attacks/'+id,{method:'DELETE'});loadAtkHistory();}
+async function delDet(id){if(!confirm('Delete?'))return;await fetch(API+'/history/detections/'+id,{method:'DELETE'});loadDetHistory();}
+
+async function loadStats(){
+  try{const d=await fetch(API+'/stats').then(x=>x.json());
+  document.getElementById('s1').textContent=d.attacks.total;
+  document.getElementById('s2').textContent=d.attacks.successful;
+  document.getElementById('s3').textContent=d.attacks.success_rate+'%';
+  document.getElementById('s4').textContent=d.detections.total;
+  document.getElementById('s5').textContent=d.detections.adversarial;
+  document.getElementById('s6').textContent=d.detections.detection_rate+'%';
+  const maxC=Math.max(...(d.attacks.by_type||[]).map(x=>x.count),1);
+  document.getElementById('typeTable').innerHTML=(d.attacks.by_type||[]).length?d.attacks.by_type.map(t=>'<tr><td>'+t.attack_type.toUpperCase()+'</td><td><div class="type-bar-wrap"><div class="type-bar"><div class="type-bar-fill" style="width:'+(t.count/maxC*100)+'%"></div></div><span style="font-family:var(--mono);font-size:.7rem;color:var(--text-dim);white-space:nowrap">'+t.count+' runs</span></div></td><td style="font-family:var(--mono);font-size:.7rem;color:var(--green)">'+(t.successes||0)+' ok</td></tr>').join(''):'<tr><td colspan="3"><div class="empty" style="padding:20px">No data</div></td></tr>';
+  const mF=Math.max(...(d.top_fooled_labels||[]).map(x=>x.count),1);
+  document.getElementById('topFooled').innerHTML=(d.top_fooled_labels||[]).length?d.top_fooled_labels.map(l=>'<div class="cbar" style="margin-bottom:12px"><div class="cbar-top"><span style="text-transform:capitalize">'+l.adversarial_label+'</span><span>'+l.count+'x</span></div><div class="cbar-track"><div class="cbar-fill fill-a" style="width:'+(l.count/mF*100)+'%"></div></div></div>').join(''):'<div class="empty" style="padding:20px">No successful attacks yet</div>';}
+  catch(e){toast('Failed to load stats');}
+}
+
+function setupDrop(dropId,inputId,previewId,btnId,onFile){
+  const drop=document.getElementById(dropId),inp=document.getElementById(inputId),prev=document.getElementById(previewId),btn=document.getElementById(btnId);
+  inp.addEventListener('change',e=>handle(e.target.files[0]));
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');handle(e.dataTransfer.files[0])});
+  function handle(f){if(!f)return;prev.src=URL.createObjectURL(f);prev.style.display='block';btn.disabled=false;onFile(f);}
+}
+function setBtnLoading(bId,sId,tId,loading,txt){const b=document.getElementById(bId),s=document.getElementById(sId),t=document.getElementById(tId);b.disabled=loading;s.style.display=loading?'block':'none';t.textContent=txt;}
+function showOverlay(txt,sub){document.getElementById('ovTxt').textContent=txt;document.getElementById('ovSub').textContent=sub;document.getElementById('overlay').classList.add('on');}
+function hideOverlay(){document.getElementById('overlay').classList.remove('on');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),4500);}
+function fmt(dt){try{return new Date(dt).toLocaleString();}catch{return dt;}}
+</script>
+</body>
+</html>
